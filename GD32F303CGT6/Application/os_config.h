@@ -1,0 +1,6 @@
+#ifndef INCLUDED_OS_CONFIG_H
+#define INCLUDED_OS_CONFIG_H
+
+#define OS_ENABLE
+
+#endif /*INCLUDED_OS_CONFIG_H*/

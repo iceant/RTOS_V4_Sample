@@ -1,0 +1,19 @@
+pack:
+  - ./Pack/GigaDevice.GD32F30x_DFP.2.2.3.zip
+
+target_override: gd32f303cg
+frequency: 8000000
+connect_mode: halt
+dap_protocol: swd
+debug:
+  log_flm_info: true
+  traceback: true
+fast_program: false
+#reset_type: hw
+resume_on_disconnect: true
+chip_erase: auto
+allow_no_cores: true
+auto_unlock: false
+
+jlink:
+  non_interactive: false
