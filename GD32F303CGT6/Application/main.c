@@ -10,7 +10,9 @@
 #include "two_yield_thread.h"
 #include "sdk_hex.h"
 #include "sdk_ringbuffer.h"
+#include <test_flash.h>
 
+#if defined(OS_ENABLE)
 static uint8_t use_usart0_thread_stack[1024];
 static os_thread_t use_usart0_thread;
 static os_sem_t use_usart0_sem;
@@ -96,13 +98,25 @@ static void illegal_thread_entry(void*p){
         printf("illegal_instruction_execution loop...\n");
     }
 }
+#endif
+
+static void delay(uint32_t v){
+    uint32_t n = SystemCoreClock/1000000;
+    for(uint32_t i=0; i<v*14; i++){
+        for(uint32_t j; j<n; j++);
+    }
+}
 
 int main(void)
 {
+    nvic_vector_table_set(NVIC_VECTTAB_FLASH, 0x00010000);
+    
     Board_Init();
    
     nvic_show_priority();
-         
+    
+    Test_Flash_Run();
+    Test_Flash2_Run();
     
     #if defined(OS_ENABLE)
     
@@ -133,6 +147,6 @@ int main(void)
     
     while(1){
         printf("Hello\n");
-        for(int i=0; i<0x3ffffff; i++);
+        delay(1000*1000);
     }
 }

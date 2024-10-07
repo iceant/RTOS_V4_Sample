@@ -34,7 +34,7 @@ if (CMAKE_C_COMPILER_ID MATCHES ARMCC)
     set(CMAKE_C_FLAGS  "${CMAKE_C_FLAGS} --c99 --gnu -c --cpu ${CMAKE_SYSTEM_PROCESSOR} -g -W -O0 --apcs=interwork --split_sections")
     set(CMAKE_ASM_FLAGS "${CMAKE_ASM_FLAGS} --cpu ${CMAKE_SYSTEM_PROCESSOR} -g --apcs=interwork --pd \"__MICROLIB SETA 1\" --pd \"__UVISION_VERSION SETA 537\" --pd \"${FW_CPU_TYPE} SETA 1\" --xref --diag_warning=optimizations")
     target_link_options(${PROJECT_NAME} PUBLIC --cpu ${CMAKE_SYSTEM_PROCESSOR}
-            --scatter ${CMAKE_CURRENT_SOURCE_DIR}/ARMCC/link.sct
+            --scatter ${CMAKE_CURRENT_SOURCE_DIR}/ARMCC/application.sct
             --library_type=microlib --strict --summary_stderr
             --info summarysizes --map --xref --callgraph --symbols
     )
@@ -43,10 +43,10 @@ endif ()
 ########################################################################################################################
 ## RTOS
 add_subdirectory(${RTOS_DIR} ${CMAKE_CURRENT_BINARY_DIR}/RTOS_V4)
-target_link_libraries(${PROJECT_NAME} PUBLIC RTOS_COMPILER)
-target_link_libraries(${PROJECT_NAME} PUBLIC RTOS_CPU)
-target_link_libraries(${PROJECT_NAME} PUBLIC RTOS_KERNEL)
-target_link_libraries(${PROJECT_NAME} PUBLIC RTOS_SDK)
+target_link_libraries(${PROJECT_NAME} PRIVATE RTOS_COMPILER)
+target_link_libraries(${PROJECT_NAME} PRIVATE RTOS_CPU)
+target_link_libraries(${PROJECT_NAME} PRIVATE RTOS_KERNEL)
+target_link_libraries(${PROJECT_NAME} PRIVATE RTOS_SDK)
 
 ########################################################################################################################
 ## FIRMWARE
@@ -94,8 +94,8 @@ endif ()
 ########################################################################################################################
 ## BOARD
 file(GLOB BOARD_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/Board/*.c)
-target_sources(${PROJECT_NAME} PUBLIC ${BOARD_SOURCES})
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Board)
+target_sources(${PROJECT_NAME} PRIVATE ${BOARD_SOURCES})
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Board)
 
 foreach (item IN LISTS BOARD_SOURCES)
     message(STATUS "[${PROJECT_NAME}] BOARD_SOURCES: ${item}")
@@ -103,13 +103,22 @@ endforeach ()
 ########################################################################################################################
 ## APPLICATION
 file(GLOB APPLICATION_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/Application/*.c)
-target_sources(${PROJECT_NAME} PUBLIC ${APPLICATION_SOURCES})
-target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Application)
+target_sources(${PROJECT_NAME} PRIVATE ${APPLICATION_SOURCES})
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Application)
 
 foreach (item IN LISTS APPLICATION_SOURCES)
     message(STATUS "[${PROJECT_NAME}] APPLICATION_SOURCES: ${item}")
 endforeach ()
 
+########################################################################################################################
+## IAP
+file(GLOB IAP_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/IAP/*.c)
+target_sources(${PROJECT_NAME} PRIVATE ${IAP_SOURCES})
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/IAP)
+
+foreach (item IN LISTS IAP_SOURCES)
+    message(STATUS "[${PROJECT_NAME}] IAP_SOURCES: ${item}")
+endforeach ()
 
 
 ########################################################################################################################
@@ -129,3 +138,63 @@ if (CMAKE_C_COMPILER_ID MATCHES ARMCC)
                     Building ${BIN_FILE}")
 endif ()
 
+########################################################################################################################
+## BOOTLOADER
+set(BOOTLOADER_NAME ${PROJECT_NAME}_Bootloader)
+add_executable(${BOOTLOADER_NAME} "")
+
+if (CMAKE_C_COMPILER_ID MATCHES ARMCC)
+    target_link_options(${BOOTLOADER_NAME} PUBLIC --cpu ${CMAKE_SYSTEM_PROCESSOR}
+            --scatter ${CMAKE_CURRENT_SOURCE_DIR}/ARMCC/bootloader.sct
+            --library_type=microlib --strict --summary_stderr
+            --info summarysizes --map --xref --callgraph --symbols
+    )
+endif ()
+
+file(GLOB BOOTLOADER_SOURCES Bootloader/*.c)
+foreach (item IN LISTS BOOTLOADER_SOURCES)
+    message(STATUS "[${BOOTLOADER_NAME}] BOOTLOADER_SOURCES: ${item}")
+endforeach ()
+target_sources(${BOOTLOADER_NAME} PRIVATE ${BOOTLOADER_SOURCES})
+target_include_directories(${BOOTLOADER_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Bootloader/)
+
+target_sources(${BOOTLOADER_NAME} PUBLIC ${FW_CMSIS_CORE_SOURCES})
+target_sources(${BOOTLOADER_NAME} PUBLIC ${FW_STD_PERIPH_DRIVER_SOURCES})
+
+target_include_directories(${BOOTLOADER_NAME} PUBLIC ${FW_DIR}/CMSIS/)
+target_include_directories(${BOOTLOADER_NAME} PUBLIC ${FW_DIR}/CMSIS/GD/GD32F30x/Include)
+target_include_directories(${BOOTLOADER_NAME} PUBLIC ${FW_DIR}/GD32F30x_standard_peripheral/Include)
+
+target_sources(${BOOTLOADER_NAME} PRIVATE ${BOARD_SOURCES})
+target_include_directories(${BOOTLOADER_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/Board)
+
+target_link_libraries(${BOOTLOADER_NAME} PRIVATE RTOS_COMPILER)
+target_link_libraries(${BOOTLOADER_NAME} PRIVATE RTOS_CPU)
+target_link_libraries(${BOOTLOADER_NAME} PRIVATE RTOS_KERNEL)
+target_link_libraries(${BOOTLOADER_NAME} PRIVATE RTOS_SDK)
+
+target_sources(${BOOTLOADER_NAME} PRIVATE ${IAP_SOURCES})
+target_include_directories(${BOOTLOADER_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/IAP)
+
+if (CMAKE_C_COMPILER_ID MATCHES ARMCC)
+    set(FW_CMSIS_DEVICE_STARTUP_SOURCE ${FW_DIR}/CMSIS/GD/GD32F30x/Source/ARM/startup_gd32f30x_xd.s)
+    target_sources(${BOOTLOADER_NAME} PUBLIC ${FW_CMSIS_DEVICE_STARTUP_SOURCE})
+    foreach (item IN LISTS FW_CMSIS_DEVICE_STARTUP_SOURCE)
+        message(STATUS "[${BOOTLOADER_NAME}] FW_CMSIS_DEVICE_STARTUP_SOURCE: ${item}")
+    endforeach ()
+endif ()
+
+if (CMAKE_C_COMPILER_ID MATCHES ARMCC)
+    set(HEX_FILE ${PROJECT_BINARY_DIR}/${BOOTLOADER_NAME}.hex)
+    set(ASM_FILE ${PROJECT_BINARY_DIR}/${BOOTLOADER_NAME}.asm)
+    set(BIN_FILE ${PROJECT_BINARY_DIR}/${BOOTLOADER_NAME}.bin)
+
+    add_custom_command(TARGET ${BOOTLOADER_NAME} POST_BUILD
+            COMMAND ${CMAKE_OBJCOPY} --i32 $<TARGET_FILE:${BOOTLOADER_NAME}> --output=${HEX_FILE}
+            COMMAND ${CMAKE_OBJCOPY} -c --cpu=${CMAKE_SYSTEM_PROCESSOR} $<TARGET_FILE:${BOOTLOADER_NAME}> --output=${ASM_FILE}
+            COMMAND ${CMAKE_OBJCOPY} --bin $<TARGET_FILE:${BOOTLOADER_NAME}> --output=${BIN_FILE}
+            COMMAND ${CMAKE_OBJCOPY} -z $<TARGET_FILE:${BOOTLOADER_NAME}>
+            COMMENT "Building ${HEX_FILE}
+                    Building ${ASM_FILE}
+                    Building ${BIN_FILE}")
+endif ()

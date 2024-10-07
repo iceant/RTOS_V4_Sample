@@ -1,4 +1,5 @@
 #include <board.h>
+#include <os_config.h>
 #include <os_kernel.h>
 #include <cpu.h>
 
@@ -9,7 +10,6 @@ void Board_Init(void)
     BSP_USART0_Init();
     
     #if defined(OS_ENABLE)
-    
     SysTick_Config(SystemCoreClock / OS_TICK_PER_SECOND);
     
     NVIC_SetPriority(SVCall_IRQn, 0x00);
