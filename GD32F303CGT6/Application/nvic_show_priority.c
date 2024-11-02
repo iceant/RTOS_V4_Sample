@@ -20,14 +20,11 @@ void nvic_show_priority(void )
     SHOW_SYS_IRQ(PendSV_IRQn);
     SHOW_SYS_IRQ(SysTick_IRQn);
 
-    for(uint8_t i=WWDGT_IRQn; i<=DMA1_Channel3_Channel4_IRQn; i++){
+    for(int i=WWDGT_IRQn; i<=DMA1_Channel3_Channel4_IRQn; i++){
         if(NVIC->IP[i]!=0){
             printf("IRQ_%d: Priority = %d(0x%x)\n", i, NVIC->IP[i], NVIC->IP[i]);
         }
     }
-    
-    for(int i=0; i<0x3fffff; i++);
-
 }
 
 

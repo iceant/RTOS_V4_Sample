@@ -127,7 +127,7 @@ int main(void)
     
     DWT_Delay_ms(100);
     
-    nvic_show_priority();
+
     
 //    Test_Flash_Run();
 //    Test_Flash2_Run();
@@ -140,6 +140,8 @@ int main(void)
     
     cpu_disable_irq();
     os_kernel_init();
+    
+    nvic_show_priority();
     
     single_thread_run();
     

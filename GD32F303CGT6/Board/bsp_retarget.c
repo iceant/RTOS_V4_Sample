@@ -3,14 +3,32 @@
 
 #define USARTX USART0
 
-struct __FILE{int handle;};
-typedef struct __FILE FILE;
+#ifdef __GNUC__
+    #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+    #define GETCHAR_PROTOTYPE int __io_getchar(void)
+#else
+    struct __FILE{int handle;};
+    typedef struct __FILE FILE;
 
-int fputc(int ch, FILE* fp){
+    #define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+    #define GETCHAR_PROTOTYPE int fgetc(FILE* f)
+#endif /* __GNUC__ */
+
+
+
+PUTCHAR_PROTOTYPE{
     
     usart_data_transmit(USARTX, (uint8_t)ch);
     while(RESET == usart_flag_get(USARTX, USART_FLAG_TBE));
     
     return ch;
 }
+
+GETCHAR_PROTOTYPE{
+    uint8_t ch;
+    ch = usart_data_receive(USARTX);
+    return ch;
+}
+
+
 
