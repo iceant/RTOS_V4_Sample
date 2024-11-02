@@ -4,4 +4,6 @@
 #define OS_ENABLE
 #define IAP_USED_IN_APPLICATION
 
+//#define EXCEPTION_TEST_ENABLE
+
 #endif /*INCLUDED_OS_CONFIG_H*/

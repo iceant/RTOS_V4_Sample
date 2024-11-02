@@ -2,15 +2,15 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <board.h>
-#include <stdio.h>
 #include <os_kernel.h>
 #include <nvic_show_priority.h>
 #include <single_thread.h>
-//#include "printf.h"
+#include "printf.h"
 #include "two_yield_thread.h"
 #include "sdk_hex.h"
 #include "sdk_ringbuffer.h"
 #include <test_flash.h>
+#include <switch_to_thread.h>
 
 #if defined(OS_ENABLE)
 static uint8_t use_usart0_thread_stack[1024];
@@ -20,6 +20,7 @@ static uint8_t use_usart0_rxblock[1024];
 static sdk_ringbuffer_t use_usart0_buffer;
 
 static int use_usart0_rx_handler(uint8_t* data, size_t size, void* ud){
+//    sdk_ringbuffer_reset(&use_usart0_buffer);
     sdk_ringbuffer_write(&use_usart0_buffer, data, size);
     os_sem_release(&use_usart0_sem);
     return 0;
@@ -36,19 +37,28 @@ static void use_usart0_thread_entry(void* p){
             SDK_HEX_DUMP("USE_USART0", use_usart0_buffer.buffer, used);
         }
         
-        if(sdk_ringbuffer_find_str(&use_usart0_buffer, 0, "reboot")>=SDK_ERR_ERROR){
+        int find = sdk_ringbuffer_find_str(&use_usart0_buffer, 0, "reboot");
+
+        if(find>SDK_ERR_ERROR){
+            printf("Find 'reboot' = %d\n", find);
             Board_Reboot();
         }
-        
-        if(used>0){
+
+        find = sdk_ringbuffer_find_str(&use_usart0_buffer, 0, "switch");
+        if(find > SDK_ERR_ERROR){
             sdk_ringbuffer_reset(&use_usart0_buffer);
+            switch_to_thread_notify();
         }
+        
+//        if(sdk_ringbuffer_is_full(&use_usart0_buffer)){
+            sdk_ringbuffer_reset(&use_usart0_buffer);
+//        }
         
     }
 }
 
 /* EXCEPTION TEST CASE */
-
+#if defined(EXCEPTION_TEST_ENABLE)
 int illegal_instruction_execution(void) {
   int (*bad_instruction)(void) = (void *)0xE0000000;
   return bad_instruction();
@@ -98,7 +108,9 @@ static void illegal_thread_entry(void*p){
         printf("illegal_instruction_execution loop...\n");
     }
 }
-#endif
+#endif /*EXCEPTION_TEST_ENABLE*/
+
+#endif /*OS_ENABLE*/
 
 static void delay(uint32_t v){
     uint32_t n = SystemCoreClock/1000000;
@@ -109,22 +121,31 @@ static void delay(uint32_t v){
 
 int main(void)
 {
-    nvic_vector_table_set(NVIC_VECTTAB_FLASH, 0x00010000);
+    nvic_vector_table_set(NVIC_VECTTAB_FLASH, 0x00000000);
     
     Board_Init();
-   
+    
+    DWT_Delay_ms(100);
+    
     nvic_show_priority();
     
-    Test_Flash_Run();
-    Test_Flash2_Run();
+//    Test_Flash_Run();
+//    Test_Flash2_Run();
     
     #if defined(OS_ENABLE)
     
+    printf("/* -------------------- */\n");
+    printf("/* Application V1.0 */\n");
+    printf("/* -------------------- */\n\n");
+    
+    cpu_disable_irq();
     os_kernel_init();
     
     single_thread_run();
     
-    two_yield_thread_startup();
+//    two_yield_thread_startup();
+
+    switch_to_thread_run();
        
     os_sem_init(&use_usart0_sem, "use_usart0_sem", 0, OS_WAIT_FLAG_FIFO);
     
@@ -133,12 +154,14 @@ int main(void)
         , 20, 10, 0, 0);
     os_thread_startup(&use_usart0_thread);
     
-        
+    #if defined(EXCEPTION_TEST_ENABLE)
     os_thread_init(&illegal_thread, "illegal_thd", illegal_thread_entry, 0
         , illegal_thread_stack, OS_ARRAY_SIZE(illegal_thread_stack)
         , 20, 10, 0, 0);
-    os_thread_startup(&illegal_thread);    
-        
+    os_thread_startup(&illegal_thread);
+    #endif
+    
+    cpu_enable_irq();
     os_kernel_startup();
     
     #endif

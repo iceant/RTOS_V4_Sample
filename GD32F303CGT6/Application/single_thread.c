@@ -8,7 +8,7 @@ static os_thread_t single_thread;
 static void thread_entry(void* p){
     uint32_t nCount = 0;
     while(1){
-        printf("nCount: %lu\n", nCount++);
+        printf("nCount: %lu, Tick:%lu\n\n", nCount++, os_tick_get());
         os_thread_mdelay(1000);
     }
 }

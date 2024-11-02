@@ -1,6 +1,6 @@
 #include <iap_boot.h>
-#include <os_kernel.h>
 #include <gd32f30x.h>
+#include <os_kernel.h>
 
 static os_thread_t IAP__Thread;
 static uint8_t IAP__ThreadStack[1024];
@@ -41,10 +41,8 @@ void IAP_JumpToApplication(unsigned int address)
     if(((*(volatile uint32_t*)address) & 0x2FFE0000)==0x20000000){
         cpu_set_primask(1);
         IAP_Function_T JumpAddress = (IAP_Function_T)*(volatile uint32_t*)(address + 4);
-        cpu_disable_irq();
         cpu_set_msp(*(volatile uint32_t*)address);
         IAP_ClearPendingIRQs();
-        cpu_set_primask(0);
         JumpAddress();
         while(1);
     }

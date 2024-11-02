@@ -36,6 +36,7 @@ OF SUCH DAMAGE.
 */
 
 #include "gd32f30x_it.h"
+#include <os_config.h>
 #include <os_kernel.h>
 
 
@@ -99,8 +100,10 @@ void DebugMon_Handler(void)
 {
 }
 
+#if defined(OS_ENABLE)
 void SysTick_Handler(void){
     os_interrupt_enter();
-    os_scheduler_systick();
+    os_service_systick();
     os_interrupt_leave();
 }
+#endif

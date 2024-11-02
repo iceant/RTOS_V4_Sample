@@ -117,7 +117,8 @@ void BSP_USART0_DMARx(uint8_t* buffer, size_t size){
     dma_init_struct.priority = DMA_PRIORITY_ULTRA_HIGH;
     dma_init(DMAX, DMA_RX_CHN, &dma_init_struct);
     /* configure DMA mode */
-    dma_circulation_disable(DMAX, DMA_RX_CHN);
+//    dma_circulation_disable(DMAX, DMA_RX_CHN);
+    dma_circulation_enable(DMAX, DMA_RX_CHN);
     dma_memory_to_memory_disable(DMAX, DMA_RX_CHN);
     
 //    nvic_irq_enable(DMA_RX_CHN_IRQn, 0, 3);

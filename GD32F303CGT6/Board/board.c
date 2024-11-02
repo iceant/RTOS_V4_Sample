@@ -17,6 +17,7 @@ void Board_Init(void)
     NVIC_SetPriority(PendSV_IRQn, 0xFF);
     #endif
     
+    DWT_Delay_Init();
 }
 
 void Board_DeInit(void){
