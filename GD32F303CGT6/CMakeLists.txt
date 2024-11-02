@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.28)
 set(RTOS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../RTOS_V4)
+
 set(TOOLCHAIN_PREFIX "M:/NoInstall/arm-gnu-toolchain-12.2.rel1-mingw-w64-i686-arm-none-eabi" CACHE STRING "TOOLCHAIN_PREFIX" FORCE)
 set(CMAKE_TOOLCHAIN_FILE ${RTOS_DIR}/CMake/GNU/toolchain.cmake)
+
+#set(CMAKE_TOOLCHAIN_FILE ${RTOS_DIR}/CMake/ARMCC/toolchain.cmake)
 
 project(GD32F303CGT6 C)
 enable_language(ASM)
@@ -43,7 +46,6 @@ if (CMAKE_C_COMPILER_ID MATCHES ARMCC)
 endif ()
 
 if (CMAKE_C_COMPILER_ID MATCHES GNU)
-    include(binutils)
     set(LINKER_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/GNU/GD32F303CBT6.ld")
     include(GD32F303CGT6.cmake)
 endif ()
@@ -133,21 +135,14 @@ endforeach ()
 ########################################################################################################################
 ## POST BUILD
 if (CMAKE_C_COMPILER_ID MATCHES ARMCC)
-    set(HEX_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.hex)
-    set(ASM_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.asm)
-    set(BIN_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.bin)
-
-    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-            COMMAND ${CMAKE_OBJCOPY} --i32 $<TARGET_FILE:${PROJECT_NAME}> --output=${HEX_FILE}
-            COMMAND ${CMAKE_OBJCOPY} -c --cpu=${CMAKE_SYSTEM_PROCESSOR} $<TARGET_FILE:${PROJECT_NAME}> --output=${ASM_FILE}
-            COMMAND ${CMAKE_OBJCOPY} --bin $<TARGET_FILE:${PROJECT_NAME}> --output=${BIN_FILE}
-            COMMAND ${CMAKE_OBJCOPY} -z $<TARGET_FILE:${PROJECT_NAME}>
-            COMMENT "Building ${HEX_FILE}
-                    Building ${ASM_FILE}
-                    Building ${BIN_FILE}")
+    include(binutils)
+    create_bin_output(${PROJECT_NAME})
+    create_hex_output(${PROJECT_NAME})
+    print_section_sizes(${PROJECT_NAME})
 endif ()
 
 if (CMAKE_C_COMPILER_ID MATCHES GNU)
+    include(binutils)
     create_bin_output(${PROJECT_NAME})
     create_hex_output(${PROJECT_NAME})
     print_section_sizes(${PROJECT_NAME})
