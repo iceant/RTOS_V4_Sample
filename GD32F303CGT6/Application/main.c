@@ -9,8 +9,10 @@
 #include "two_yield_thread.h"
 #include "sdk_hex.h"
 #include "sdk_ringbuffer.h"
+#include "bsp_cpuid.h"
 #include <test_flash.h>
 #include <switch_to_thread.h>
+#include <sdk_hex.h>
 
 #if defined(OS_ENABLE)
 static uint8_t use_usart0_thread_stack[1024];
@@ -119,6 +121,20 @@ static void delay(uint32_t v){
     }
 }
 
+static void ShowMemoryDensity(void){
+    printf("SRAM_DENSITY: %d\n", BSP_Memory_GetSRAMDensity());
+    printf("FLASH_DENSITY: %d\n", BSP_Memory_GetFlashDensity());
+}
+
+static void ShowUID(void){
+    char UID[97];
+    BSP_CPUID_T CPUID;
+    BSP_CPUID_GetDeviceID(&CPUID);
+    SDK_HEX_ENCODE_BE(UID, OS_ARRAY_SIZE(UID), CPUID.UID.U8, OS_ARRAY_SIZE(CPUID.UID.U8));
+    sdk_hex_dump("Unique Device ID", CPUID.UID.U8, 12, printf);
+    printf("UID: %s\n", UID);
+}
+
 int main(void)
 {
     nvic_vector_table_set(NVIC_VECTTAB_FLASH, 0x00000000);
@@ -126,7 +142,6 @@ int main(void)
     Board_Init();
     
     DWT_Delay_ms(100);
-    
 
     
 //    Test_Flash_Run();
@@ -142,6 +157,10 @@ int main(void)
     os_kernel_init();
     
     nvic_show_priority();
+    
+    ShowMemoryDensity();
+    
+    ShowUID();
     
     single_thread_run();
     

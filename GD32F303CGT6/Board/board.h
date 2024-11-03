@@ -22,6 +22,10 @@
 #include <dwt_delay.h>
 #endif /*INCLUDED_DWT_DELAY_H*/
 
+#ifndef INCLUDED_BSP_MEMORY_H
+#include <bsp_memory.h>
+#endif /*INCLUDED_BSP_MEMORY_H*/
+
 
 
 /* -------------------------------------------------------------------------------------------------------------- */
